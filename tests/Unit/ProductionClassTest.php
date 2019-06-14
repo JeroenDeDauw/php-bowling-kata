@@ -28,23 +28,36 @@ class ProductionClassTest extends TestCase {
 	private function game( string $throws ) {
 		$sum = 0;
 		$frameSum = 0;
-		$wasSpare = false;
-		foreach ( str_split( $throws ) as $throw ) {
-			$throwValue = $throw === '-' ? 0 : (int)$throw;
-			if ($wasSpare) {
-				$throwValue *= 2;
-				$wasSpare = false;
-			}
-			$sum += $throwValue;
-			$frameSum += $throwValue;
+		$doubleNextThrow = false; // x 23
+		$doubleThrowAfterNextOne = false;
+		foreach ( explode( ' ', $throws ) as $frame ) {
+			foreach ( str_split( $frame ) as $throw ) {
+				$throwValue = $this->getThrowValue( $throw );
 
-			if ($throw === ' ') {
-				$wasSpare = $frameSum === 10;
-				$frameSum = 0;
+				if ($doubleNextThrow) {
+					$throwValue *= 2;
+					$doubleNextThrow = false;
+				}
+				if ($doubleThrowAfterNextOne) {
+					$doubleNextThrow = true;
+					$doubleThrowAfterNextOne = false;
+				}
+				$doubleThrowAfterNextOne = $doubleThrowAfterNextOne == 'x';
+				$sum += $throwValue;
+				$frameSum += $throwValue;
 			}
+			$doubleNextThrow = $frameSum === 10;
+			$frameSum = 0;
 		}
 
 		return $sum;
+	}
+
+	private function getThrowValue(string $throw) {
+		if ($throw === 'x') {
+			return 10;
+		}
+		return $throw === '-' ? 0 : (int)$throw;
 	}
 
 	/**
@@ -75,4 +88,22 @@ class ProductionClassTest extends TestCase {
 	public function testSpare() {
 		$this->assertGameScore( 12, '-- 73 1- -- -- -- -- -- -- --' );
 	}
+
+	public function testSecondThrowAfterSpareNotDoubled() {
+		$this->assertGameScore( 14, '-- 73 12 -- -- -- -- -- -- --' );
+	}
+
+	public function testSpareGivesOneExtraThrow() {
+		$this->assertGameScore( 15, '-- -- -- -- -- -- -- -- -- 735' );
+	}
+
+	public function testSingleStrike() {
+		$this->assertGameScore( 10, '-- -- -- -- -- x -- -- -- --' );
+	}
+
+	public function testStrikeDoublesNextTwoThrows() {
+		$this->assertGameScore( 20, '-- -- -- -- -- x 23 -- -- --' );
+	}
+
+
 }
