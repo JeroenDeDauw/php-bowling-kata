@@ -5,7 +5,58 @@ declare( strict_types = 1 );
 namespace Such\NewProject\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
-use Such\NewProject\ProductionClass;
+
+class Bowling {
+	private $previousFrame = 'normal';
+
+	public function game( string $throws ) {
+		$frameStack = [];
+
+		foreach ( explode( ' ', $throws ) as $frame ) {
+			$frameStack[] = $this->getFrameSum( $frame );
+		}
+
+		return array_sum( $frameStack );
+	}
+
+	private function getFrameSum( string $frame ) {
+		$frameSum = 0;
+
+		foreach ( str_split( $frame ) as $throwNumberInFrame => $throw ) {
+			$throwValue = $this->getThrowValue( $throw );
+
+			if ( $this->throwNeedsToBeDoubled( $throwNumberInFrame ) ) {
+				$throwValue *= 2;
+			}
+
+			$frameSum += $throwValue;
+		}
+
+		if ( $throw === 'x' ) {
+			$this->previousFrame = 'strike';
+		}
+		elseif ( $frameSum === 10 ) {
+			$this->previousFrame = 'spare';
+		}
+		else {
+			$this->previousFrame = 'normal';
+		}
+
+		return $frameSum;
+	}
+
+	private function throwNeedsToBeDoubled( $throwNumberInFrame ): bool {
+		return ( $throwNumberInFrame === 0 && in_array( $this->previousFrame, [ 'strike', 'spare' ] ) )
+			|| $throwNumberInFrame === 1 && $this->previousFrame === 'strike';
+	}
+
+	private function getThrowValue(string $throw) {
+		if ($throw === 'x') {
+			return 10;
+		}
+		return $throw === '-' ? 0 : (int)$throw;
+	}
+}
 
 /**
  * @covers \Such\NewProject\ProductionClass
@@ -21,43 +72,8 @@ class ProductionClassTest extends TestCase {
 	private function assertGameScore( int $expectedScore, string $throws ) {
 		$this->assertSame(
 			$expectedScore,
-			$this->game( $throws )
+			(new Bowling() )->game( $throws )
 		);
-	}
-
-	private function game( string $throws ) {
-		$sum = 0;
-		$frameSum = 0;
-		$doubleNextThrow = false; // x 23
-		$doubleThrowAfterNextOne = false;
-		foreach ( explode( ' ', $throws ) as $frame ) {
-			foreach ( str_split( $frame ) as $throw ) {
-				$throwValue = $this->getThrowValue( $throw );
-
-				if ($doubleNextThrow) {
-					$throwValue *= 2;
-					$doubleNextThrow = false;
-				}
-				if ($doubleThrowAfterNextOne) {
-					$doubleNextThrow = true;
-					$doubleThrowAfterNextOne = false;
-				}
-				$doubleThrowAfterNextOne = $doubleThrowAfterNextOne == 'x';
-				$sum += $throwValue;
-				$frameSum += $throwValue;
-			}
-			$doubleNextThrow = $frameSum === 10;
-			$frameSum = 0;
-		}
-
-		return $sum;
-	}
-
-	private function getThrowValue(string $throw) {
-		if ($throw === 'x') {
-			return 10;
-		}
-		return $throw === '-' ? 0 : (int)$throw;
 	}
 
 	/**
@@ -104,6 +120,5 @@ class ProductionClassTest extends TestCase {
 	public function testStrikeDoublesNextTwoThrows() {
 		$this->assertGameScore( 20, '-- -- -- -- -- x 23 -- -- --' );
 	}
-
 
 }
